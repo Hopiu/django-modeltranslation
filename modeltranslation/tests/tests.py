@@ -1492,6 +1492,9 @@ class OtherFieldsTest(ModeltranslationTestBase):
         assert 'decimal' in field_names
         assert 'decimal_de' in field_names
         assert 'decimal_en' in field_names
+        assert 'json' in field_names
+        assert 'json_de' in field_names
+        assert 'json_en' in field_names
         inst.delete()
 
     def test_translated_models_integer_instance(self):
@@ -2232,6 +2235,28 @@ class UpdateCommandTest(ModeltranslationTestBase):
     def test_update_command_invalid_language_param(self):
         with pytest.raises(CommandError):
             call_command('update_translation_fields', language='xx', verbosity=0)
+
+    def test_update_command_with_json_field(self):
+        """
+        Test that the update_translation_fields command works with JSON fields.
+        """
+        instance_pk = models.OtherFieldsModel.objects.create(json={'foo': 'bar'}).pk
+        models.OtherFieldsModel.objects.all().rewrite(False).update(json_de=None)
+
+        instance = models.OtherFieldsModel.objects.filter(pk=instance_pk).raw_values()[0]
+
+        assert instance['json'] == {'foo': 'bar'}
+        assert instance['json_de'] is None
+        assert instance['json_en'] is None
+
+        call_command('update_translation_fields', 'tests',
+                     model_name='OtherFieldsModel', verbosity=0)
+
+        instance = models.OtherFieldsModel.objects.filter(pk=instance_pk).raw_values()[0]
+
+        assert instance['json'] == {'foo': 'bar'}
+        assert instance['json_de'] == {'foo': 'bar'}
+        assert instance['json_en'] is None
 
 
 class TranslationAdminTest(ModeltranslationTestBase):
